@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain Intel Matrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Exo+2:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Roboto Mono', monospace; 
+            background-color: #0d1117;
+            color: #c9d1d9;
+        }
+        .font-display { font-family: 'Exo 2', sans-serif; }
+        .loader { 
+            border-color: rgba(0, 255, 255, 0.2);
+            border-top-color: #00ffff; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .card { 
+            background-color: #161b22; 
+            border: 1px solid #30363d;
+            transition: all 0.2s ease-in-out;
+        }
+        .card:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+        }
+        .card-title { 
+            color: #00ffff; 
+            font-family: 'Exo 2', sans-serif;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+        .card-content { color: #8b949e; }
+        .card-list { list-style-position: inside; list-style-type: '» '; }
+        
+        .btn-scan {
+            background-color: #00ffff;
+            color: #0d1117;
+            font-family: 'Exo 2', sans-serif;
+            text-shadow: 0 0 2px rgba(13, 17, 23, 0.5);
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-scan:hover {
+            box-shadow: 0 0 20px #00ffff;
+        }
+        
+        strong { color: #c9d1d9; }
+        /* FIX: Added styles to pre tags to wrap long text and prevent overflow */
+        pre { 
+            background-color: #0d1117 !important; 
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-6xl">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-100 font-display">Domain Intel Matrix</h1>
+            <p class="text-cyan-400 mt-2">// Local Backend Active</p>
+        </header>
+
+        <!-- Domain Input Section -->
+        <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-xl shadow-lg mb-8 sticky top-4 z-10">
+            <div class="flex flex-col sm:flex-row gap-4">
+                <input type="text" id="domainInput" placeholder="target.domain" class="flex-grow w-full px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition text-gray-200">
+                <button id="checkButton" class="w-full sm:w-auto btn-scan font-semibold px-8 py-3 rounded-lg">
+                    SCAN
+                </button>
+            </div>
+            <div id="error-message" class="text-red-400 mt-3 font-medium hidden"></div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loader" class="text-center my-12 hidden">
+            <div class="loader ease-linear rounded-full border-8 h-24 w-24 mx-auto"></div>
+            <p class="mt-4 text-cyan-400 tracking-widest">Executing query...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="hidden">
+            <h2 class="text-2xl font-bold mb-6 font-display">Scan results for: <span id="domainChecked" class="text-cyan-400"></span></h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Column 1: General & DNS -->
+                <div class="flex flex-col gap-6">
+                    <div id="whois-card" class="card">
+                        <h3 class="card-title">Registrar [WHOIS]</h3>
+                        <div id="whois" class="card-content"></div>
+                    </div>
+                    <div id="a-records-card" class="card">
+                        <h3 class="card-title">A / AAAA Records</h3>
+                        <div id="a-records" class="card-content"></div>
+                    </div>
+                     <div id="cname-card" class="card">
+                        <h3 class="card-title">CNAME Record [www]</h3>
+                        <div id="cname" class="card-content"></div>
+                    </div>
+                </div>
+
+                <!-- Column 2: DNS & Email -->
+                <div class="flex flex-col gap-6">
+                    <div id="ns-card" class="card">
+                        <h3 class="card-title">NS Records</h3>
+                        <ul id="nsRecords" class="card-content card-list"></ul>
+                    </div>
+                    <div id="mx-card" class="card">
+                        <h3 class="card-title">MX Records</h3>
+                        <ul id="mxRecords" class="card-content card-list"></ul>
+                    </div>
+                    <div id="soa-card" class="card">
+                        <h3 class="card-title">SOA Record</h3>
+                        <ul id="soa" class="card-content card-list"></ul>
+                    </div>
+                    <div id="rdns-card" class="card">
+                        <h3 class="card-title">Reverse DNS [rDNS]</h3>
+                        <div id="rdns" class="card-content"></div>
+                    </div>
+                </div>
+
+                <!-- Column 3: Security & Server -->
+                <div class="flex flex-col gap-6">
+                    <div id="security-card" class="card">
+                        <h3 class="card-title">Security Records</h3>
+                        <div id="security" class="card-content"></div>
+                    </div>
+                    <div id="ssl-card" class="card">
+                        <h3 class="card-title">SSL Certificate</h3>
+                        <div id="ssl" class="card-content"></div>
+                    </div>
+                     <div id="headers-card" class="card">
+                        <h3 class="card-title">Server & HTTP Headers</h3>
+                        <div id="headers" class="card-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const domainInput = document.getElementById('domainInput');
+        const checkButton = document.getElementById('checkButton');
+        const loader = document.getElementById('loader');
+        const resultsDiv = document.getElementById('results');
+        const errorMessage = document.getElementById('error-message');
+
+        const showLoader = () => {
+            resultsDiv.classList.add('hidden');
+            loader.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+        };
+        const hideLoader = () => loader.classList.add('hidden');
+        const showResults = () => {
+            hideLoader();
+            resultsDiv.classList.remove('hidden');
+        };
+        const showError = (message) => {
+            hideLoader();
+            errorMessage.innerHTML = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        const renderList = (element, items, messageIfEmpty) => {
+            if (items && items.length > 0) {
+                element.innerHTML = items.map(item => `<li>${item}</li>`).join('');
+            } else {
+                element.innerHTML = `<li class="list-none text-gray-500">${messageIfEmpty}</li>`;
+            }
+        };
+
+        const renderKeyValue = (element, data) => {
+            if (data && Object.keys(data).length > 0 && !data.error) {
+                let html = '<ul class="space-y-1">';
+                for (const [key, value] of Object.entries(data)) {
+                    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    let displayValue = Array.isArray(value) ? value.join(', ') : value;
+                    displayValue = displayValue || 'N/A';
+                    html += `<li><strong>${displayKey}:</strong> ${displayValue}</li>`;
+                }
+                html += '</ul>';
+                element.innerHTML = html;
+            } else if (data && data.error) {
+                 element.innerHTML = `<p class="text-red-400">${data.error}</p>`;
+            } else {
+                element.innerHTML = `<p class="text-gray-500">No data found.</p>`;
+            }
+        };
+
+        checkButton.addEventListener('click', async () => {
+            let domain = domainInput.value.trim();
+            if (!domain) {
+                showError('Target domain required.');
+                return;
+            }
+            
+            domain = domain.replace(/^https?:\/\//, '').split('/')[0];
+
+            showLoader();
+            document.getElementById('domainChecked').textContent = domain;
+
+            try {
+                const dynamicBackendUrl = `${window.location.protocol}//${window.location.hostname}:4500`;
+                const response = await fetch(`${dynamicBackendUrl}/check?domain=${encodeURIComponent(domain)}`);
+                if (!response.ok) {
+                    throw new Error(`Server returned error: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                renderKeyValue(document.getElementById('whois'), data.whois);
+                
+                const aRecordsDiv = document.getElementById('a-records');
+                aRecordsDiv.innerHTML = `<strong>A (IPv4):</strong><ul class="list-disc list-inside mb-2">${(data.dns.A || []).map(i => `<li>${i}</li>`).join('') || '<li class="list-none text-gray-500">None</li>'}</ul>`;
+                aRecordsDiv.innerHTML += `<strong>AAAA (IPv6):</strong><ul class="list-disc list-inside">${(data.dns.AAAA || []).map(i => `<li>${i}</li>`).join('') || '<li class="list-none text-gray-500">None</li>'}</ul>`;
+
+                renderList(document.getElementById('cname'), data.dns.CNAME_www, 'No CNAME record found for www.');
+                renderList(document.getElementById('nsRecords'), data.dns.NS, 'No NS records found.');
+                renderList(document.getElementById('mxRecords'), data.dns.MX, 'No MX records found.');
+                renderList(document.getElementById('soa'), data.dns.SOA, 'No SOA record found.');
+                renderKeyValue(document.getElementById('rdns'), data.dns.rDNS);
+
+                const securityDiv = document.getElementById('security');
+                securityDiv.innerHTML = `
+                    <p class="mb-2"><strong>DNSSEC:</strong> ${data.security.DNSSEC || 'N/A'}</p>
+                    <p class="mb-2"><strong>CAA:</strong></p>
+                    <pre class="bg-gray-900 p-2 rounded mb-2 text-xs">${(data.security.CAA || ['Not Found']).join('\n')}</pre>
+                    <p class="mb-2"><strong>SPF:</strong></p>
+                    <pre class="bg-gray-900 p-2 rounded mb-2 text-xs">${data.security.SPF || 'Not Found'}</pre>
+                    <p class="mb-2"><strong>DMARC:</strong></p>
+                    <pre class="bg-gray-900 p-2 rounded text-xs">${(data.security.DMARC || ['Not Found']).join('\n')}</pre>
+                `;
+
+                renderKeyValue(document.getElementById('ssl'), data.server.ssl_info);
+
+                const headersDiv = document.getElementById('headers');
+                if (data.server && !data.server.error) {
+                    let headersHtml = `<p class="mb-1"><strong>Protocol:</strong> <span class="uppercase">${data.server.protocol}</span></p>`;
+                    headersHtml += `<p class="mb-1"><strong>Status:</strong> ${data.server.status_code}</p>`;
+                    headersHtml += `<p class="mb-2"><strong>Final URL:</strong> <span class="break-all">${data.server.final_url}</span></p>`;
+                    headersHtml += '<strong>Headers:</strong>'
+                    headersHtml += '<pre class="bg-gray-900 p-2 rounded text-xs mt-1 h-48 overflow-y-auto">';
+                    for (const [key, value] of Object.entries(data.server.headers)) {
+                        headersHtml += `<strong>${key}:</strong> ${value}\n`;
+                    }
+                    headersHtml += '</pre>';
+                    headersDiv.innerHTML = headersHtml;
+                } else {
+                    renderKeyValue(headersDiv, data.server);
+                }
+
+                showResults();
+
+            } catch (error) {
+                console.error('Fetch error:', error);
+                showError(`Connection refused. Is the local Python server running?<br><br><strong>Details:</strong> ${error.message}`);
+            }
+        });
+        
+        domainInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') checkButton.click();
+        });
+    </script>
+</body>
+</html>
