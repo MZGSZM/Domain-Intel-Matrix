@@ -21,10 +21,26 @@ def index():
     """Serves the main HTML user interface."""
     return app.send_static_file('checker_frontend.html')
 
-def get_dns_records(domain, record_type):
-    """Helper function to query specific DNS records using dnspython."""
+def get_dns_records(domain, record_type, nameserver_str):
+    """Helper function to query specific DNS records using a custom resolver."""
     try:
-        answers = dns.resolver.resolve(domain, record_type)
+        resolver = dns.resolver.Resolver()
+        ip = nameserver_str
+        port = 53  # Default DNS port
+
+        if ':' in nameserver_str:
+            parts = nameserver_str.split(':')
+            ip = parts[0]
+            try:
+                port = int(parts[1])
+            except (ValueError, IndexError):
+                port = 53 # Fallback to default if port is invalid
+        
+        resolver.nameservers = [ip]
+        resolver.port = port
+
+        answers = resolver.resolve(domain, record_type)
+
         if record_type in ['A', 'AAAA']:
             return [r.to_text() for r in answers]
         if record_type == 'MX':
@@ -38,15 +54,21 @@ def get_dns_records(domain, record_type):
     except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.Timeout):
         return None
     except Exception as e:
-        print(f"Error resolving {record_type} for {domain}: {e}")
-        return None
+        print(f"Error resolving {record_type} for {domain} with NS {nameserver_str}: {e}")
+        return [f"Error: {e}"] # Return error message to frontend
 
 @app.route('/check')
 def check_domain():
     """Main endpoint to gather all domain information."""
     domain = request.args.get('domain')
+    nameserver = request.args.get('nameserver', '9.9.9.9') # Default to 9.9.9.9
+
     if not domain:
         return jsonify({"error": "Domain parameter is required"}), 400
+
+    if '://' in domain:
+        domain = domain.split('://')[1]
+    domain = domain.split('/')[0]
 
     results = {
         "domain": domain,
@@ -75,16 +97,16 @@ def check_domain():
         results["whois"]["error"] = f"Could not fetch WHOIS data. Error: {str(e)}"
 
     # --- 2. DNS Health & Configuration ---
-    a_records = get_dns_records(domain, 'A')
+    a_records = get_dns_records(domain, 'A', nameserver)
     results["dns"]["A"] = a_records
-    results["dns"]["AAAA"] = get_dns_records(domain, 'AAAA')
-    results["dns"]["CNAME_www"] = get_dns_records(f"www.{domain}", 'CNAME')
-    results["dns"]["NS"] = get_dns_records(domain, 'NS')
-    results["dns"]["MX"] = get_dns_records(domain, 'MX')
-    results["dns"]["SOA"] = get_dns_records(domain, 'SOA')
+    results["dns"]["AAAA"] = get_dns_records(domain, 'AAAA', nameserver)
+    results["dns"]["CNAME_www"] = get_dns_records(f"www.{domain}", 'CNAME', nameserver)
+    results["dns"]["NS"] = get_dns_records(domain, 'NS', nameserver)
+    results["dns"]["MX"] = get_dns_records(domain, 'MX', nameserver)
+    results["dns"]["SOA"] = get_dns_records(domain, 'SOA', nameserver)
     
     # --- 3. Reverse DNS ---
-    if a_records:
+    if a_records and not a_records[0].startswith("Error:"):
         try:
             addr = socket.gethostbyaddr(a_records[0])
             results["dns"]["rDNS"] = {"ip": a_records[0], "hostname": addr[0]}
@@ -92,11 +114,11 @@ def check_domain():
             results["dns"]["rDNS"] = {"ip": a_records[0], "hostname": "No rDNS record found."}
 
     # --- 4. Security & Email Authentication ---
-    txt_records = get_dns_records(domain, 'TXT') or []
+    txt_records = get_dns_records(domain, 'TXT', nameserver) or []
     results["security"]["SPF"] = next((r for r in txt_records if r.startswith('v=spf1')), None)
-    results["security"]["DMARC"] = get_dns_records(f"_dmarc.{domain}", 'TXT')
-    results["security"]["CAA"] = get_dns_records(domain, 'CAA')
-    results["security"]["DNSSEC"] = "Enabled" if get_dns_records(domain, 'DNSKEY') else "Not Enabled or Not Found"
+    results["security"]["DMARC"] = get_dns_records(f"_dmarc.{domain}", 'TXT', nameserver)
+    results["security"]["CAA"] = get_dns_records(domain, 'CAA', nameserver)
+    results["security"]["DNSSEC"] = "Enabled" if get_dns_records(domain, 'DNSKEY', nameserver) else "Not Enabled or Not Found"
 
     # --- 5. Server Information (HTTP Headers) ---
     try:
@@ -119,7 +141,7 @@ def check_domain():
         except requests.exceptions.RequestException as e_http:
             results["server"]["error"] = f"Could not connect to the server. Error: {str(e_http)}"
 
-    # --- 6. SSL Certificate Information (NEW) ---
+    # --- 6. SSL Certificate Information ---
     try:
         context = ssl.create_default_context()
         with socket.create_connection((domain, 443), timeout=5) as sock:
@@ -141,4 +163,4 @@ if __name__ == '__main__':
     print("Starting Domain Checker Backend Server...")
     print(f"Place 'checker_frontend.html' in the same directory: {os.path.dirname(os.path.abspath(__file__))}")
     print("Navigate to http://127.0.0.1:4500 in your browser to use the tool.")
-    app.run(host='0.0.0.0', port=4500, debug=True)
+    app.run(host='0.0.0.0', port=4500, debug=False)
