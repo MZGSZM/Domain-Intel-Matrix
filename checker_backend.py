@@ -115,7 +115,7 @@ def is_ip_address(query):
 def check_query():
     """Main endpoint that handles both domain and IP queries."""
     query = request.args.get('query')
-    nameserver = request.args.get('nameserver', '9.9.9.9')
+    nameserver = request.args.get('nameserver', '1.1.1.1')
     logging.info(f"Received check request. Query: '{query}', Nameserver: '{nameserver}'")
 
     if not query:
