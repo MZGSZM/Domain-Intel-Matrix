@@ -57,6 +57,7 @@ Flask-Cors
 dnspython
 python-whois
 requests
+ipaddress
 ```
 ### 3. Set Up the Virtual Environment
 `python3 -m venv venv`
