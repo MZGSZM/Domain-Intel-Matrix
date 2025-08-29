@@ -72,7 +72,7 @@
             <div class="flex flex-col sm:flex-row gap-4 items-center">
                 <input type="text" id="queryInput" placeholder="domain.tld or IP address" class="flex-grow w-full px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200">
                 <div class="flex w-full sm:w-auto gap-4">
-                    <input type="text" id="nameserverInput" value="9.9.9.9" class="w-full sm:w-48 px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200" title="DNS Resolver">
+                    <input type="text" id="nameserverInput" value="1.1.1.1" class="w-full sm:w-48 px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200" title="DNS Resolver">
                     <button id="checkButton" class="w-full sm:w-auto btn-scan font-semibold px-8 py-3 rounded-lg">
                         SCAN
                     </button>
@@ -227,7 +227,7 @@
                 return;
             }
             
-            const nameserver = nameserverInput.value.trim() || '9.9.9.9';
+            const nameserver = nameserverInput.value.trim() || '1.1.1.1';
             showLoader();
 
             try {
