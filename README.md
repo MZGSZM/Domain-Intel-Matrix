@@ -134,5 +134,50 @@ Once the service is running, you can access the Domain Intel Matrix from any dev
 
 `http://<your_server_ip>:4500`
 
-Replace <your_server_ip> with the local IP address of the machine running the application. You can find this IP by running ip addr show on the server.
+Replace <your_server_ip> with the local IP address of the machine running the application. You can find this IP by running `ip addr show` on the server.
 
+## Optionally, run this in Docker
+*This assumes you are already running Docker and have at least some working knowledge of it.*
+
+### 1. Clone the contents of this repo (or just download each file) to the location where you'd like to run it.
+
+### 2. In the same directory, make a Dockerfile with the following contents (adjust to your environment as needed).
+```
+# Use an official Python runtime as a parent image
+FROM python:3.13-slim
+
+# Set the working directory in the container
+WORKDIR /usr/src/app
+
+# Copy the current directory contents into the container at /usr/src/app
+COPY . .
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Make port 4500 available to the world outside this container.
+EXPOSE 4500
+
+# Run checker_backend.py when the container launches
+CMD ["python", "./checker_backend.py"]
+```
+
+### 3. Create a new text file named requirements.txt with the same contents [as listed above](https://github.com/ReverendRetro/Domain-Intel-Matrix#2-create-requirementstxt).
+
+### 4. While in the directory with the files, run `docker build -t domain-intel-matrix/latest .`
+*domain-intel-matrix/latest can be replaced with whatever name you like.*
+
+This command will build a simple Docker image that contains the files in the current directory, a copy of Python (and this app's dependencies). The container will start the python file at startup.
+
+### 5. Use Docker run or Docker Compose to create a container based on the image that was just created.
+`docker run -p 4500:4500 --restart unless-stopped domain-intel-matrix/latest`
+
+```
+services:
+  dim:
+    image: domain-intel-matrix/latest
+    ports:
+      - 4500:4500
+    restart: unless-stopped
+```
+You may want to attach it to a network you have already configured also. If you changed the name specified in the build command, you'll need to change it here too.

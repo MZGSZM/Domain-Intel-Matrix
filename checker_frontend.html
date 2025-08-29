@@ -17,7 +17,7 @@
         .font-display { font-family: 'Exo 2', sans-serif; }
         .loader { 
             border-color: rgba(0, 255, 255, 0.2);
-            border-top-color: #00ffff; 
+            border-top-color: #f41c2c; 
             animation: spin 1s linear infinite; 
         }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -28,11 +28,11 @@
             transition: all 0.2s ease-in-out;
         }
         .card:hover {
-            border-color: #00ffff;
+            border-color: #f41c2c;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
         }
         .card-title { 
-            color: #00ffff; 
+            color: #f41c2c; 
             font-family: 'Exo 2', sans-serif;
             text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
         }
@@ -40,14 +40,14 @@
         .card-list { list-style-position: inside; list-style-type: '» '; }
         
         .btn-scan {
-            background-color: #00ffff;
+            background-color: #f41c2c;
             color: #0d1117;
             font-family: 'Exo 2', sans-serif;
             text-shadow: 0 0 2px rgba(13, 17, 23, 0.5);
             transition: all 0.2s ease-in-out;
         }
         .btn-scan:hover {
-            box-shadow: 0 0 20px #00ffff;
+            box-shadow: 0 0 20px #f41c2c;
         }
         
         strong { color: #c9d1d9; }
@@ -64,15 +64,15 @@
         
         <header class="text-center mb-8">
             <h1 class="text-4xl sm:text-5xl font-bold text-gray-100 font-display">Domain Intel Matrix</h1>
-            <p class="text-cyan-400 mt-2">// Local Backend Active</p>
+            <p class="text-[#f41c2c] mt-2">// Local Backend Active</p>
         </header>
 
         <!-- Domain Input Section -->
         <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-xl shadow-lg mb-8 sticky top-4 z-10">
             <div class="flex flex-col sm:flex-row gap-4 items-center">
-                <input type="text" id="domainInput" placeholder="example.com" class="flex-grow w-full px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition text-gray-200">
+                <input type="text" id="domainInput" placeholder="example.com" class="flex-grow w-full px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200">
                 <div class="flex w-full sm:w-auto gap-4">
-                    <input type="text" id="nameserverInput" value="9.9.9.9" class="w-full sm:w-48 px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition text-gray-200">
+                    <input type="text" id="nameserverInput" value="9.9.9.9" class="w-full sm:w-48 px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200">
                     <button id="checkButton" class="w-full sm:w-auto btn-scan font-semibold px-8 py-3 rounded-lg">
                         SCAN
                     </button>
@@ -84,12 +84,12 @@
         <!-- Loading Spinner -->
         <div id="loader" class="text-center my-12 hidden">
             <div class="loader ease-linear rounded-full border-8 h-24 w-24 mx-auto"></div>
-            <p class="mt-4 text-cyan-400 tracking-widest">Executing query...</p>
+            <p class="mt-4 text-[#f41c2c] tracking-widest">Executing query...</p>
         </div>
 
         <!-- Results Section -->
         <div id="results" class="hidden">
-            <h2 class="text-2xl font-bold mb-6 font-display">Scan results for: <span id="domainChecked" class="text-cyan-400"></span></h2>
+            <h2 class="text-2xl font-bold mb-6 font-display">Scan results for: <span id="domainChecked" class="text-[#f41c2c]"></span></h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <!-- Column 1: General & DNS -->
