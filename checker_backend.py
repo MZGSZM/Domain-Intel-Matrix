@@ -1,5 +1,5 @@
 # checker_backend.py
-# Description: A local Flask server to perform domain and reverse IP lookups.
+# Description: A local Flask server to perform domain and reverse IP lookups with a logging toggle.
 # Dependencies: Flask, dnspython, python-whois, requests
 # To run: python checker_backend.py
 
@@ -11,7 +11,19 @@ import requests
 import socket
 import ssl
 import os
-import ipaddress # New import for IP address validation
+import ipaddress
+import logging
+
+# --- NEW: Logging Toggle ---
+# Set this to True for detailed debugging, or False for standard operation (warnings/errors only)
+VERBOSE_LOGGING = False
+
+# --- Setup Logging Based on the Toggle ---
+if VERBOSE_LOGGING:
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+else:
+    logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 # Configure the app to serve static files from the current directory
 app = Flask(__name__, static_folder=os.path.dirname(os.path.abspath(__file__)))
@@ -22,33 +34,57 @@ def index():
     """Serves the main HTML user interface."""
     return app.send_static_file('checker_frontend.html')
 
+def get_ipv6_source_address(dest_ip):
+    """
+    Find a usable, global IPv6 source address on the system by checking the route
+    to a destination IP. This is more reliable than checking hostnames.
+    """
+    logging.debug(f"Attempting to find a global IPv6 source address for destination {dest_ip}...")
+    try:
+        s = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+        s.connect((dest_ip, 80))
+        source_ip = s.getsockname()[0]
+        s.close()
+        logging.info(f"Selected '{source_ip}' as the global IPv6 source address.")
+        return source_ip
+    except Exception as e:
+        logging.error(f"Could not determine source IPv6 address: {e}", exc_info=True)
+    
+    logging.warning("No suitable global IPv6 address found. Falling back to '::'.")
+    return '::'
+
+
 def get_dns_records(domain, record_type, nameserver_str):
     """Helper function to query specific DNS records using a custom resolver."""
+    logging.info(f"Querying for {record_type} record for '{domain}' using NS '{nameserver_str}'")
     try:
         resolver = dns.resolver.Resolver()
         ip = nameserver_str
         port = 53
+        is_ipv6 = False
 
-        # FIX for IPv6 and custom ports
-        # Handles [ipv6]:port, ipv6, ipv4:port, and ipv4
         if nameserver_str.startswith('[') and ']:' in nameserver_str:
             parts = nameserver_str.split(']:')
             ip = parts[0][1:]
             port = int(parts[1])
+            is_ipv6 = True
         elif ':' in nameserver_str and nameserver_str.count(':') > 1:
-            # This is likely a bare IPv6 address
             ip = nameserver_str
             port = 53
+            is_ipv6 = True
         elif ':' in nameserver_str:
-            # This is likely an IPv4 with a port
             parts = nameserver_str.split(':')
             ip = parts[0]
             port = int(parts[1])
         
         resolver.nameservers = [ip]
         resolver.port = port
+        logging.debug(f"Resolver configured with NS IP: {ip}, Port: {port}, IsIPv6: {is_ipv6}")
 
-        answers = resolver.resolve(domain, record_type)
+        source_address = get_ipv6_source_address(ip) if is_ipv6 else '0.0.0.0'
+        logging.debug(f"Using source address '{source_address}' for the query.")
+        
+        answers = resolver.resolve(domain, record_type, source=source_address)
 
         if record_type in ['A', 'AAAA']:
             return [r.to_text() for r in answers]
@@ -60,10 +96,11 @@ def get_dns_records(domain, record_type, nameserver_str):
             r = answers[0]
             return [f"MNAME: {r.mname.to_text()}", f"RNAME: {r.rname.to_text()}", f"Serial: {r.serial}"]
         return [r.to_text() for r in answers]
-    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.Timeout):
+    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN, dns.exception.Timeout) as e:
+        logging.warning(f"DNS query for {domain} ({record_type}) failed with: {type(e).__name__}")
         return None
     except Exception as e:
-        print(f"Error resolving {record_type} for {domain} with NS {nameserver_str}: {e}")
+        logging.error(f"An unexpected error occurred during DNS resolution for {domain} ({record_type})", exc_info=True)
         return [f"Error: {e}"]
 
 def is_ip_address(query):
@@ -79,25 +116,28 @@ def check_query():
     """Main endpoint that handles both domain and IP queries."""
     query = request.args.get('query')
     nameserver = request.args.get('nameserver', '9.9.9.9')
+    logging.info(f"Received check request. Query: '{query}', Nameserver: '{nameserver}'")
 
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
 
-    # --- NEW: Route between IP lookup and Domain lookup ---
     if is_ip_address(query):
-        # Perform Reverse IP Lookup
+        logging.debug(f"Query '{query}' identified as an IP address. Performing reverse IP lookup.")
         try:
             api_url = f"https://api.hackertarget.com/reverseiplookup/?q={query}"
             response = requests.get(api_url, timeout=10)
             if response.status_code == 200 and not response.text.startswith("error"):
                 hostnames = response.text.strip().split('\n')
+                logging.info(f"Reverse IP lookup for '{query}' successful. Found {len(hostnames)} hostnames.")
                 return jsonify({"type": "ip_lookup", "hostnames": hostnames})
             else:
+                logging.error(f"Reverse IP lookup API returned an error: {response.text.strip()}")
                 return jsonify({"type": "ip_lookup", "hostnames": [f"API Error: {response.text.strip()}"]})
         except requests.RequestException as e:
+            logging.error(f"Reverse IP lookup API request failed", exc_info=True)
             return jsonify({"type": "ip_lookup", "hostnames": [f"API Request Failed: {e}"]})
     else:
-        # Perform Domain Check (existing logic)
+        logging.debug(f"Query '{query}' identified as a domain. Performing full domain check.")
         return perform_domain_check(query, nameserver)
 
 def perform_domain_check(domain, nameserver):
@@ -133,7 +173,7 @@ def perform_domain_check(domain, nameserver):
     results["dns"]["MX"] = get_dns_records(domain, 'MX', nameserver)
     results["dns"]["SOA"] = get_dns_records(domain, 'SOA', nameserver)
     
-    if a_records and not a_records[0].startswith("Error:"):
+    if a_records and a_records[0] and not a_records[0].startswith("Error:"):
         try:
             addr = socket.gethostbyaddr(a_records[0])
             results["dns"]["rDNS"] = {"ip": a_records[0], "hostname": addr[0]}
