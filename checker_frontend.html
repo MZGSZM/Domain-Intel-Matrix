@@ -29,12 +29,12 @@
         }
         .card:hover {
             border-color: #f41c2c;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(244, 28, 44, 0.2);
         }
         .card-title { 
             color: #f41c2c; 
             font-family: 'Exo 2', sans-serif;
-            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+            text-shadow: 0 0 5px rgba(244, 28, 44, 0.5);
         }
         .card-content { color: #8b949e; }
         .card-list { list-style-position: inside; list-style-type: '» '; }
@@ -67,12 +67,12 @@
             <p class="text-[#f41c2c] mt-2">// Local Backend Active</p>
         </header>
 
-        <!-- Domain Input Section -->
+        <!-- Input Section -->
         <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-xl shadow-lg mb-8 sticky top-4 z-10">
             <div class="flex flex-col sm:flex-row gap-4 items-center">
-                <input type="text" id="domainInput" placeholder="example.com" class="flex-grow w-full px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200">
+                <input type="text" id="queryInput" placeholder="domain.tld or IP address" class="flex-grow w-full px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200">
                 <div class="flex w-full sm:w-auto gap-4">
-                    <input type="text" id="nameserverInput" value="9.9.9.9" class="w-full sm:w-48 px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200">
+                    <input type="text" id="nameserverInput" value="9.9.9.9" class="w-full sm:w-48 px-4 py-3 text-lg bg-[#0d1117] border-2 border-[#30363d] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#f41c2c] focus:border-[#f41c2c] transition text-gray-200" title="DNS Resolver">
                     <button id="checkButton" class="w-full sm:w-auto btn-scan font-semibold px-8 py-3 rounded-lg">
                         SCAN
                     </button>
@@ -87,84 +87,58 @@
             <p class="mt-4 text-[#f41c2c] tracking-widest">Executing query...</p>
         </div>
 
-        <!-- Results Section -->
-        <div id="results" class="hidden">
+        <!-- Reverse IP Results Section -->
+        <div id="reverseIpResults" class="hidden">
+             <h2 class="text-2xl font-bold mb-6 font-display">Reverse IP results for: <span id="ipChecked" class="text-[#f41c2c]"></span></h2>
+             <div class="card">
+                <h3 class="card-title">Hostnames Found</h3>
+                <ul id="hostnameList" class="card-content space-y-2">
+                    <!-- Hostnames will be injected here -->
+                </ul>
+             </div>
+        </div>
+
+        <!-- Domain Check Results Section -->
+        <div id="domainResults" class="hidden">
             <h2 class="text-2xl font-bold mb-6 font-display">Scan results for: <span id="domainChecked" class="text-[#f41c2c]"></span></h2>
-            
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Column 1: General & DNS -->
                 <div class="flex flex-col gap-6">
-                    <div id="whois-card" class="card">
-                        <h3 class="card-title">Registrar [WHOIS]</h3>
-                        <div id="whois" class="card-content"></div>
-                    </div>
-                    <div id="a-records-card" class="card">
-                        <h3 class="card-title">A / AAAA Records</h3>
-                        <div id="a-records" class="card-content"></div>
-                    </div>
-                     <div id="cname-card" class="card">
-                        <h3 class="card-title">CNAME Record [www]</h3>
-                        <div id="cname" class="card-content"></div>
-                    </div>
+                    <div id="whois-card" class="card"><h3 class="card-title">Registrar [WHOIS]</h3><div id="whois" class="card-content"></div></div>
+                    <div id="a-records-card" class="card"><h3 class="card-title">A / AAAA Records</h3><div id="a-records" class="card-content"></div></div>
+                    <div id="cname-card" class="card"><h3 class="card-title">CNAME Record [www]</h3><div id="cname" class="card-content"></div></div>
                 </div>
-
-                <!-- Column 2: DNS & Email -->
                 <div class="flex flex-col gap-6">
-                    <div id="ns-card" class="card">
-                        <h3 class="card-title">NS Records</h3>
-                        <ul id="nsRecords" class="card-content card-list"></ul>
-                    </div>
-                    <div id="mx-card" class="card">
-                        <h3 class="card-title">MX Records</h3>
-                        <ul id="mxRecords" class="card-content card-list"></ul>
-                    </div>
-                    <div id="soa-card" class="card">
-                        <h3 class="card-title">SOA Record</h3>
-                        <ul id="soa" class="card-content card-list"></ul>
-                    </div>
-                    <div id="rdns-card" class="card">
-                        <h3 class="card-title">Reverse DNS [rDNS]</h3>
-                        <div id="rdns" class="card-content"></div>
-                    </div>
+                    <div id="ns-card" class="card"><h3 class="card-title">NS Records</h3><ul id="nsRecords" class="card-content card-list"></ul></div>
+                    <div id="mx-card" class="card"><h3 class="card-title">MX Records</h3><ul id="mxRecords" class="card-content card-list"></ul></div>
+                    <div id="soa-card" class="card"><h3 class="card-title">SOA Record</h3><ul id="soa" class="card-content card-list"></ul></div>
+                    <div id="rdns-card" class="card"><h3 class="card-title">Reverse DNS [rDNS]</h3><div id="rdns" class="card-content"></div></div>
                 </div>
-
-                <!-- Column 3: Security & Server -->
                 <div class="flex flex-col gap-6">
-                    <div id="security-card" class="card">
-                        <h3 class="card-title">Security Records</h3>
-                        <div id="security" class="card-content"></div>
-                    </div>
-                    <div id="ssl-card" class="card">
-                        <h3 class="card-title">SSL Certificate</h3>
-                        <div id="ssl" class="card-content"></div>
-                    </div>
-                     <div id="headers-card" class="card">
-                        <h3 class="card-title">Server & HTTP Headers</h3>
-                        <div id="headers" class="card-content"></div>
-                    </div>
+                    <div id="security-card" class="card"><h3 class="card-title">Security Records</h3><div id="security" class="card-content"></div></div>
+                    <div id="ssl-card" class="card"><h3 class="card-title">SSL Certificate</h3><div id="ssl" class="card-content"></div></div>
+                    <div id="headers-card" class="card"><h3 class="card-title">Server & HTTP Headers</h3><div id="headers" class="card-content"></div></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const domainInput = document.getElementById('domainInput');
+        const queryInput = document.getElementById('queryInput');
         const nameserverInput = document.getElementById('nameserverInput');
         const checkButton = document.getElementById('checkButton');
         const loader = document.getElementById('loader');
-        const resultsDiv = document.getElementById('results');
+        const domainResultsDiv = document.getElementById('domainResults');
+        const reverseIpResultsDiv = document.getElementById('reverseIpResults');
         const errorMessage = document.getElementById('error-message');
 
         const showLoader = () => {
-            resultsDiv.classList.add('hidden');
+            domainResultsDiv.classList.add('hidden');
+            reverseIpResultsDiv.classList.add('hidden');
             loader.classList.remove('hidden');
             errorMessage.classList.add('hidden');
         };
         const hideLoader = () => loader.classList.add('hidden');
-        const showResults = () => {
-            hideLoader();
-            resultsDiv.classList.remove('hidden');
-        };
+        
         const showError = (message) => {
             hideLoader();
             errorMessage.innerHTML = message;
@@ -196,87 +170,94 @@
                 element.innerHTML = `<p class="text-gray-500">No data found.</p>`;
             }
         };
+        
+        const renderDomainResults = (data) => {
+            document.getElementById('domainChecked').textContent = data.domain;
+            renderKeyValue(document.getElementById('whois'), data.whois);
+            const aRecordsDiv = document.getElementById('a-records');
+            aRecordsDiv.innerHTML = `<strong>A (IPv4):</strong><ul class="list-disc list-inside mb-2">${(data.dns.A || []).map(i => `<li>${i}</li>`).join('') || '<li class="list-none text-gray-500">None</li>'}</ul>`;
+            aRecordsDiv.innerHTML += `<strong>AAAA (IPv6):</strong><ul class="list-disc list-inside">${(data.dns.AAAA || []).map(i => `<li>${i}</li>`).join('') || '<li class="list-none text-gray-500">None</li>'}</ul>`;
+            renderList(document.getElementById('cname'), data.dns.CNAME_www, 'No CNAME record found for www.');
+            renderList(document.getElementById('nsRecords'), data.dns.NS, 'No NS records found.');
+            renderList(document.getElementById('mxRecords'), data.dns.MX, 'No MX records found.');
+            renderList(document.getElementById('soa'), data.dns.SOA, 'No SOA record found.');
+            renderKeyValue(document.getElementById('rdns'), data.dns.rDNS);
+            const securityDiv = document.getElementById('security');
+            securityDiv.innerHTML = `<p class="mb-2"><strong>DNSSEC:</strong> ${data.security.DNSSEC || 'N/A'}</p><p class="mb-2"><strong>CAA:</strong></p><pre class="bg-gray-900 p-2 rounded mb-2 text-xs">${(data.security.CAA || ['Not Found']).join('\n')}</pre><p class="mb-2"><strong>SPF:</strong></p><pre class="bg-gray-900 p-2 rounded mb-2 text-xs">${data.security.SPF || 'Not Found'}</pre><p class="mb-2"><strong>DMARC:</strong></p><pre class="bg-gray-900 p-2 rounded text-xs">${(data.security.DMARC || ['Not Found']).join('\n')}</pre>`;
+            renderKeyValue(document.getElementById('ssl'), data.server.ssl_info);
+            const headersDiv = document.getElementById('headers');
+            if (data.server && !data.server.error) {
+                let headersHtml = `<p class="mb-1"><strong>Protocol:</strong> <span class="uppercase">${data.server.protocol}</span></p><p class="mb-1"><strong>Status:</strong> ${data.server.status_code}</p><p class="mb-2"><strong>Final URL:</strong> <span class="break-all">${data.server.final_url}</span></p><strong>Headers:</strong><pre class="bg-gray-900 p-2 rounded text-xs mt-1 h-48 overflow-y-auto">${Object.entries(data.server.headers).map(([key, value]) => `<strong>${key}:</strong> ${value}`).join('\n')}</pre>`;
+                headersDiv.innerHTML = headersHtml;
+            } else {
+                renderKeyValue(headersDiv, data.server);
+            }
+            hideLoader();
+            domainResultsDiv.classList.remove('hidden');
+        };
 
-        checkButton.addEventListener('click', async () => {
-            let domain = domainInput.value.trim();
-            if (!domain) {
-                showError('Target domain required.');
+        const renderIpLookupResults = (query, hostnames) => {
+            document.getElementById('ipChecked').textContent = query;
+            const listElement = document.getElementById('hostnameList');
+            listElement.innerHTML = ''; // Clear previous results
+            if (hostnames && hostnames.length > 0 && !hostnames[0].startsWith('API Error')) {
+                hostnames.forEach(hostname => {
+                    const li = document.createElement('li');
+                    const button = document.createElement('button');
+                    button.textContent = hostname;
+                    button.className = 'text-[#f41c2c] hover:underline cursor-pointer';
+                    button.onclick = () => {
+                        queryInput.value = hostname;
+                        checkButton.click();
+                    };
+                    li.appendChild(button);
+                    listElement.appendChild(li);
+                });
+            } else {
+                listElement.innerHTML = `<li class="text-gray-500">${hostnames[0] || 'No hostnames found for this IP.'}</li>`;
+            }
+            hideLoader();
+            reverseIpResultsDiv.classList.remove('hidden');
+        };
+
+        const performCheck = async () => {
+            let query = queryInput.value.trim();
+            if (!query) {
+                showError('Target query required.');
                 return;
             }
             
-            domain = domain.replace(/^https?:\/\//, '').split('/')[0];
             const nameserver = nameserverInput.value.trim() || '9.9.9.9';
-
             showLoader();
-            document.getElementById('domainChecked').textContent = domain;
 
             try {
-                // Use the reverse-proxy friendly URL construction method
                 const url = new URL('/check', window.location.origin);
-                url.searchParams.append('domain', domain);
+                url.searchParams.append('query', query);
                 url.searchParams.append('nameserver', nameserver);
                 const response = await fetch(url);
                 
-                if (!response.ok) {
-                    throw new Error(`Server returned error: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Server returned error: ${response.status}`);
+                
                 const data = await response.json();
-                
-                renderKeyValue(document.getElementById('whois'), data.whois);
-                
-                const aRecordsDiv = document.getElementById('a-records');
-                aRecordsDiv.innerHTML = `<strong>A (IPv4):</strong><ul class="list-disc list-inside mb-2">${(data.dns.A || []).map(i => `<li>${i}</li>`).join('') || '<li class="list-none text-gray-500">None</li>'}</ul>`;
-                aRecordsDiv.innerHTML += `<strong>AAAA (IPv6):</strong><ul class="list-disc list-inside">${(data.dns.AAAA || []).map(i => `<li>${i}</li>`).join('') || '<li class="list-none text-gray-500">None</li>'}</ul>`;
 
-                renderList(document.getElementById('cname'), data.dns.CNAME_www, 'No CNAME record found for www.');
-                renderList(document.getElementById('nsRecords'), data.dns.NS, 'No NS records found.');
-                renderList(document.getElementById('mxRecords'), data.dns.MX, 'No MX records found.');
-                renderList(document.getElementById('soa'), data.dns.SOA, 'No SOA record found.');
-                renderKeyValue(document.getElementById('rdns'), data.dns.rDNS);
-
-                const securityDiv = document.getElementById('security');
-                securityDiv.innerHTML = `
-                    <p class="mb-2"><strong>DNSSEC:</strong> ${data.security.DNSSEC || 'N/A'}</p>
-                    <p class="mb-2"><strong>CAA:</strong></p>
-                    <pre class="bg-gray-900 p-2 rounded mb-2 text-xs">${(data.security.CAA || ['Not Found']).join('\n')}</pre>
-                    <p class="mb-2"><strong>SPF:</strong></p>
-                    <pre class="bg-gray-900 p-2 rounded mb-2 text-xs">${data.security.SPF || 'Not Found'}</pre>
-                    <p class="mb-2"><strong>DMARC:</strong></p>
-                    <pre class="bg-gray-900 p-2 rounded text-xs">${(data.security.DMARC || ['Not Found']).join('\n')}</pre>
-                `;
-
-                renderKeyValue(document.getElementById('ssl'), data.server.ssl_info);
-
-                const headersDiv = document.getElementById('headers');
-                if (data.server && !data.server.error) {
-                    let headersHtml = `<p class="mb-1"><strong>Protocol:</strong> <span class="uppercase">${data.server.protocol}</span></p>`;
-                    headersHtml += `<p class="mb-1"><strong>Status:</strong> ${data.server.status_code}</p>`;
-                    headersHtml += `<p class="mb-2"><strong>Final URL:</strong> <span class="break-all">${data.server.final_url}</span></p>`;
-                    headersHtml += '<strong>Headers:</strong>'
-                    headersHtml += '<pre class="bg-gray-900 p-2 rounded text-xs mt-1 h-48 overflow-y-auto">';
-                    for (const [key, value] of Object.entries(data.server.headers)) {
-                        headersHtml += `<strong>${key}:</strong> ${value}\n`;
-                    }
-                    headersHtml += '</pre>';
-                    headersDiv.innerHTML = headersHtml;
-                } else {
-                    renderKeyValue(headersDiv, data.server);
+                if (data.type === 'ip_lookup') {
+                    renderIpLookupResults(query, data.hostnames);
+                } else if (data.type === 'domain_check') {
+                    renderDomainResults(data.data);
                 }
-
-                showResults();
 
             } catch (error) {
                 console.error('Fetch error:', error);
                 showError(`Connection refused. Is the local Python server running?<br><br><strong>Details:</strong> ${error.message}`);
             }
-        });
-        
-        domainInput.addEventListener('keyup', (event) => {
-            if (event.key === 'Enter') checkButton.click();
-        });
+        };
 
+        checkButton.addEventListener('click', performCheck);
+        queryInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') performCheck();
+        });
         nameserverInput.addEventListener('keyup', (event) => {
-            if (event.key === 'Enter') checkButton.click();
+            if (event.key === 'Enter') performCheck();
         });
     </script>
 </body>
