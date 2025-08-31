@@ -13,6 +13,7 @@ import ssl
 import os
 import ipaddress
 import logging
+import re # New import for regex-based technology detection
 
 # --- NEW: Logging Toggle ---
 # Set this to True for detailed debugging, or False for standard operation (warnings/errors only)
@@ -28,6 +29,18 @@ else:
 # Configure the app to serve static files from the current directory
 app = Flask(__name__, static_folder=os.path.dirname(os.path.abspath(__file__)))
 CORS(app)
+
+def get_api_key():
+    """Safely import the API key from config.py."""
+    try:
+        import config
+        key = getattr(config, 'HACKERTARGET_API_KEY', None)
+        if key and key != "YOUR_API_KEY_HERE":
+            return key
+        return None
+    except ImportError:
+        logging.warning("config.py not found. Reverse IP lookups will use the free tier.")
+        return None
 
 @app.route('/')
 def index():
@@ -111,6 +124,46 @@ def is_ip_address(query):
     except ValueError:
         return False
 
+def analyze_security_headers(headers):
+    """Check for security headers and return their values if present."""
+    headers_lower = {k.lower(): v for k, v in headers.items()}
+    security_headers_to_check = {
+        "Strict-Transport-Security": "strict-transport-security",
+        "Content-Security-Policy": "content-security-policy",
+        "X-Content-Type-Options": "x-content-type-options",
+        "X-Frame-Options": "x-frame-options",
+        "Referrer-Policy": "referrer-policy",
+        "Permissions-Policy": "permissions-policy",
+    }
+    
+    results = {}
+    for friendly_name, header_name in security_headers_to_check.items():
+        results[friendly_name] = headers_lower.get(header_name, "Missing")
+        
+    return results
+
+def detect_technologies(headers, content):
+    """Detect server and framework technologies from headers and page content."""
+    tech = {}
+    headers_lower = {k.lower(): v for k, v in headers.items()}
+    
+    # Check headers
+    if 'server' in headers_lower:
+        tech['Server'] = headers_lower['server']
+    if 'x-powered-by' in headers_lower:
+        tech['X-Powered-By'] = headers_lower['x-powered-by']
+    
+    # Check content for framework signatures (add more as needed)
+    if re.search(r'/wp-content/|/wp-includes/', content, re.IGNORECASE):
+        tech['Framework'] = 'WordPress'
+    elif re.search(r'Joomla!', content, re.IGNORECASE):
+        tech['Framework'] = 'Joomla'
+    elif re.search(r'Drupal', content, re.IGNORECASE):
+        tech['Framework'] = 'Drupal'
+    
+    return tech if tech else {"Info": "No specific technologies detected."}
+
+
 @app.route('/check')
 def check_query():
     """Main endpoint that handles both domain and IP queries."""
@@ -123,8 +176,19 @@ def check_query():
 
     if is_ip_address(query):
         logging.debug(f"Query '{query}' identified as an IP address. Performing reverse IP lookup.")
+        ip_obj = ipaddress.ip_address(query)
+        if ip_obj.version == 6:
+            logging.warning(f"Received request for IPv6 reverse lookup ('{query}'), which is not supported by the API.")
+            return jsonify({"type": "ip_lookup", "hostnames": ["API Error: Reverse IP lookup for IPv6 is not currently supported."]})
         try:
+            api_key = get_api_key()
             api_url = f"https://api.hackertarget.com/reverseiplookup/?q={query}"
+            if api_key:
+                api_url += f"&apikey={api_key}"
+                logging.debug("Using API key for reverse IP lookup.")
+            else:
+                logging.debug("No API key found. Using free tier for reverse IP lookup.")
+
             response = requests.get(api_url, timeout=10)
             if response.status_code == 200 and not response.text.startswith("error"):
                 hostnames = response.text.strip().split('\n')
@@ -168,9 +232,11 @@ def perform_domain_check(domain, nameserver):
     a_records = get_dns_records(domain, 'A', nameserver)
     results["dns"]["A"] = a_records
     results["dns"]["AAAA"] = get_dns_records(domain, 'AAAA', nameserver)
+    results["dns"]["A_www"] = get_dns_records(f"www.{domain}", 'A', nameserver)
     results["dns"]["CNAME_www"] = get_dns_records(f"www.{domain}", 'CNAME', nameserver)
     results["dns"]["NS"] = get_dns_records(domain, 'NS', nameserver)
-    results["dns"]["MX"] = get_dns_records(domain, 'MX', nameserver)
+    mx_records = get_dns_records(domain, 'MX', nameserver)
+    results["dns"]["MX"] = mx_records
     results["dns"]["SOA"] = get_dns_records(domain, 'SOA', nameserver)
     
     if a_records and a_records[0] and not a_records[0].startswith("Error:"):
@@ -186,19 +252,46 @@ def perform_domain_check(domain, nameserver):
     results["security"]["CAA"] = get_dns_records(domain, 'CAA', nameserver)
     results["security"]["DNSSEC"] = "Enabled" if get_dns_records(domain, 'DNSKEY', nameserver) else "Not Enabled or Not Found"
 
+    common_dkim_selectors = ['default', 'google', 'selector1', 'selector2', 'k1', 'k2', 'mail', 'dkim']
+    found_dkim_records = []
+    for selector in common_dkim_selectors:
+        dkim_domain = f"{selector}._domainkey.{domain}"
+        records = get_dns_records(dkim_domain, 'TXT', nameserver)
+        if records:
+            for record in records:
+                found_dkim_records.append(f"Selector: {selector}\nRecord: {record}")
+    results["security"]["DKIM"] = found_dkim_records if found_dkim_records else None
+
+    if mx_records:
+        mx_ptr_records = []
+        for record in mx_records:
+            mail_server = record.split(' ')[1]
+            mail_server_ip = get_dns_records(mail_server, 'A', nameserver)
+            if mail_server_ip and not mail_server_ip[0].startswith("Error:"):
+                try:
+                    ptr_addr = socket.gethostbyaddr(mail_server_ip[0])
+                    mx_ptr_records.append({"mail_server": mail_server, "ip": mail_server_ip[0], "ptr": ptr_addr[0]})
+                except socket.herror:
+                    mx_ptr_records.append({"mail_server": mail_server, "ip": mail_server_ip[0], "ptr": "No PTR record found."})
+        results["dns"]["MX_PTR"] = mx_ptr_records
+
     try:
         response = requests.get(f"https://{domain}", timeout=5, verify=True, allow_redirects=True)
-        results["server"] = {
-            "protocol": 'https', "headers": dict(response.headers),
-            "status_code": response.status_code, "final_url": response.url
-        }
+        results["server"]["protocol"] = 'https'
+        results["server"]["headers"] = dict(response.headers)
+        results["server"]["status_code"] = response.status_code
+        results["server"]["final_url"] = response.url
+        results["server"]["security_headers"] = analyze_security_headers(response.headers)
+        results["server"]["technologies"] = detect_technologies(response.headers, response.text)
     except requests.exceptions.RequestException:
         try:
             response = requests.get(f"http://{domain}", timeout=5, allow_redirects=True)
-            results["server"] = {
-                "protocol": 'http', "headers": dict(response.headers),
-                "status_code": response.status_code, "final_url": response.url
-            }
+            results["server"]["protocol"] = 'http'
+            results["server"]["headers"] = dict(response.headers)
+            results["server"]["status_code"] = response.status_code
+            results["server"]["final_url"] = response.url
+            results["server"]["security_headers"] = analyze_security_headers(response.headers)
+            results["server"]["technologies"] = detect_technologies(response.headers, response.text)
         except requests.exceptions.RequestException as e_http:
             results["server"]["error"] = f"Could not connect to the server. Error: {str(e_http)}"
 
