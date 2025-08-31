@@ -8,18 +8,20 @@ A self-hosted, web-based domain intelligence tool powered by a Python Flask back
 
 - **WHOIS Lookup**: Get registrar, creation date, and expiration date.
 - **Comprehensive DNS Records**: A, AAAA, CNAME, NS, MX, SOA, and rDNS.
-- **Security Auditing**: Checks for SPF, DMARC, CAA, and DNSSEC records.
+- **Security Auditing**: Checks for SPF, DMARC, CAA, DNSSEC, DKIM, and PTR records.
 - **SSL Certificate Info**: Displays the certificate issuer, subject, and expiration date.
 - **Server Headers**: Inspects HTTP headers from the target server.
 - **Web Interface**: A modern, dark-themed UI for easy viewing of results.
+- **Pick a custom DNS server**: Also supports ports! (eg. 127.0.0.1:5335)
+- **Reverse IP lookups**: Currently limited to IPv4 due to API limitations. Lookups use the free endpoint by default but can optionally [use an API key](https://github.com/ReverendRetro/Domain-Intel-Matrix/edit/main/README.md#6-if-you-have-an-api-token-for-hacker-target-insert-it-into-a-file-named-configpy-with-the-following-syntax).
 - **Systemd Service**: Can be configured to run as a background service that starts on boot.
+- **Easy to run in Docker**
 
 ---
 
 ## Prerequisites
 
-- A Debian-based Linux system (e.g., Debian, Ubuntu).
-- Python 3.8 or newer.
+- Python 3.8 or newer on metal or in Docker.
 - `python3-venv` package for creating virtual environments.
 - `sudo` privileges.
 
@@ -182,3 +184,6 @@ services:
     restart: unless-stopped
 ```
 You may want to attach it to a network you have already configured also. If you changed the name specified in the build command, you'll need to change it here too.
+
+### 6. If you have an API token for Hacker Target insert it into a file named config.py with the following syntax:
+`HACKERTARGET_API_KEY = "YOUR_API_KEY_HERE"`
