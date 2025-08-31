@@ -13,7 +13,7 @@ A self-hosted, web-based domain intelligence tool powered by a Python Flask back
 - **Server Headers**: Inspects HTTP headers from the target server.
 - **Web Interface**: A modern, dark-themed UI for easy viewing of results.
 - **Pick a custom DNS server**: Also supports ports! (eg. 127.0.0.1:5335)
-- **Reverse IP lookups**: Currently limited to IPv4 due to API limitations. Lookups use the free endpoint by default but can optionally [use an API key](https://github.com/ReverendRetro/Domain-Intel-Matrix/edit/main/README.md#6-if-you-have-an-api-token-for-hacker-target-insert-it-into-a-file-named-configpy-with-the-following-syntax).
+- **Reverse IP lookups**: Currently limited to IPv4 due to API limitations. Lookups use the free endpoint by default but can optionally [use an API key](https://github.com/ReverendRetro/Domain-Intel-Matrix/edit/main/README.md#api-key).
 - **Systemd Service**: Can be configured to run as a background service that starts on boot.
 - **Easy to run in Docker**
 
@@ -21,8 +21,8 @@ A self-hosted, web-based domain intelligence tool powered by a Python Flask back
 
 ## Prerequisites
 
-- Python 3.8 or newer on metal or in Docker.
-- `python3-venv` package for creating virtual environments.
+- Python 3.8 or newer
+- `python3-venv` package for creating virtual environments ([or run it in Docker](https://github.com/ReverendRetro/Domain-Intel-Matrix/edit/main/README.md#optionally-run-this-in-docker_)).
 - `sudo` privileges.
 
 ---
@@ -185,5 +185,11 @@ services:
 ```
 You may want to attach it to a network you have already configured also. If you changed the name specified in the build command, you'll need to change it here too.
 
-### 6. If you have an API token for Hacker Target insert it into a file named config.py with the following syntax:
+## API Key
+If you have an API key for Hacker Target insert it into a file named config.py with the following syntax:
+
 `HACKERTARGET_API_KEY = "YOUR_API_KEY_HERE"`
+
+If we assume your API key is key123 the file should look like this:
+
+`HACKERTARGET_API_KEY = "key123"`
